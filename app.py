@@ -304,4 +304,4 @@ if prompt:
         compiled_prompt = f"Workspace Code Context:\n
 
 ```
-    
+
