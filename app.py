@@ -6,301 +6,397 @@ from datetime import datetime
 
 st.set_page_config(page_title="Xyzan AI", page_icon="⚡", layout="wide")
 
+MODELS = [
+    "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3-32b"
+]
+
 THEMES = {
-    "Neon Purple": ["#080014", "#16002b", "#7c3aed", "#22d3ee"],
-    "Cyber Blue": ["#020617", "#0f172a", "#2563eb", "#38bdf8"],
-    "Matrix Green": ["#020b05", "#052e16", "#22c55e", "#86efac"],
-    "Fire Red": ["#140202", "#2b0505", "#ef4444", "#f97316"],
-    "Ice White": ["#e5e7eb", "#f8fafc", "#2563eb", "#0f172a"],
+    "ChatGPT Dark": {
+        "bg": "#0b0f19",
+        "panel": "#111827",
+        "card": "#171f2f",
+        "text": "#f8fafc",
+        "muted": "#94a3b8",
+        "accent": "#10a37f",
+        "accent2": "#22c55e"
+    },
+    "Gemini Glow": {
+        "bg": "#050816",
+        "panel": "#0f172a",
+        "card": "#151b33",
+        "text": "#ffffff",
+        "muted": "#a5b4fc",
+        "accent": "#7c3aed",
+        "accent2": "#38bdf8"
+    },
+    "Grok Black": {
+        "bg": "#000000",
+        "panel": "#09090b",
+        "card": "#18181b",
+        "text": "#fafafa",
+        "muted": "#a1a1aa",
+        "accent": "#ffffff",
+        "accent2": "#71717a"
+    },
+    "DeepSeek Blue": {
+        "bg": "#020617",
+        "panel": "#0f172a",
+        "card": "#172554",
+        "text": "#eff6ff",
+        "muted": "#93c5fd",
+        "accent": "#2563eb",
+        "accent2": "#60a5fa"
+    },
+    "Neon Purple": {
+        "bg": "#12001f",
+        "panel": "#1e0633",
+        "card": "#2d0b4e",
+        "text": "#ffffff",
+        "muted": "#d8b4fe",
+        "accent": "#a855f7",
+        "accent2": "#22d3ee"
+    }
 }
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "workspace_code" not in st.session_state:
-    st.session_state.workspace_code = ""
-if "ai_latest_code" not in st.session_state:
-    st.session_state.ai_latest_code = ""
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
-if "dev_mode" not in st.session_state:
-    st.session_state.dev_mode = False
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "workspace" not in st.session_state:
+    st.session_state.workspace = ""
+if "latest_code" not in st.session_state:
+    st.session_state.latest_code = ""
+if "theme" not in st.session_state:
+    st.session_state.theme = "Gemini Glow"
+if "system_mode" not in st.session_state:
+    st.session_state.system_mode = "Normal Chat"
 
-st.sidebar.title("⚡ Xyzan Control")
-
-api_input = st.sidebar.text_input(
-    "Groq API Key",
-    type="password",
-    placeholder="Paste gsk_ key here"
-)
-
-if api_input:
-    st.session_state.api_key = api_input
-
-theme_name = st.sidebar.selectbox("Theme", list(THEMES.keys()))
-bg1, bg2, accent, glow = THEMES[theme_name]
-
-mode = st.sidebar.selectbox("Mode", ["Normal Chat", "Coding Sandbox", "Developer Mode"])
-st.session_state.dev_mode = mode == "Developer Mode"
-
-model_preset = st.sidebar.selectbox(
-    "Model",
-    [
-        "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile",
-        "mixtral-8x7b-32768",
-        "gemma2-9b-it",
-        "Custom"
-    ]
-)
-
-custom_model = st.sidebar.text_input("Custom model name", placeholder="Only if Custom selected")
-model = custom_model if model_preset == "Custom" and custom_model else model_preset
-
-temperature = st.sidebar.slider("Creativity", 0.0, 1.2, 0.45)
-
-action = st.sidebar.selectbox(
-    "Coding Action",
-    [
-        "Fix bugs",
-        "Optimize code",
-        "Explain code",
-        "Add new feature",
-        "Improve UI",
-        "Make it cleaner",
-        "Find security issues",
-        "Full upgrade"
-    ]
-)
+theme_name = st.sidebar.selectbox("Theme", list(THEMES.keys()), index=list(THEMES.keys()).index(st.session_state.theme))
+st.session_state.theme = theme_name
+T = THEMES[theme_name]
 
 st.markdown(f"""
 <style>
-@keyframes float {{
-    0% {{ transform: translateY(0px); }}
-    50% {{ transform: translateY(-10px); }}
-    100% {{ transform: translateY(0px); }}
+@keyframes fadeUp {{
+  from {{opacity: 0; transform: translateY(18px);}}
+  to {{opacity: 1; transform: translateY(0);}}
 }}
 
-@keyframes glow {{
-    0% {{ box-shadow: 0 0 18px {accent}; }}
-    50% {{ box-shadow: 0 0 40px {glow}; }}
-    100% {{ box-shadow: 0 0 18px {accent}; }}
-}}
-
-@keyframes fade {{
-    from {{ opacity: 0; transform: translateY(15px); }}
-    to {{ opacity: 1; transform: translateY(0); }}
+@keyframes pulseGlow {{
+  0% {{box-shadow: 0 0 20px {T["accent"]}44;}}
+  50% {{box-shadow: 0 0 45px {T["accent2"]}66;}}
+  100% {{box-shadow: 0 0 20px {T["accent"]}44;}}
 }}
 
 .stApp {{
-    background:
-        radial-gradient(circle at top left, {accent}55, transparent 30%),
-        linear-gradient(135deg, {bg1}, {bg2});
-    color: white;
+  background:
+    radial-gradient(circle at 10% 5%, {T["accent"]}35, transparent 28%),
+    radial-gradient(circle at 90% 20%, {T["accent2"]}25, transparent 30%),
+    linear-gradient(135deg, {T["bg"]}, #020617);
+  color: {T["text"]};
 }}
 
 .block-container {{
-    padding-top: 2rem;
-    animation: fade 0.6s ease-in-out;
+  padding-top: 1.2rem;
+  max-width: 1300px;
+  animation: fadeUp .55s ease;
 }}
 
 [data-testid="stSidebar"] {{
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,.58);
+  backdrop-filter: blur(22px);
+  border-right: 1px solid rgba(255,255,255,.10);
 }}
 
 .hero {{
-    padding: 28px;
-    border-radius: 28px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
-    backdrop-filter: blur(18px);
-    animation: glow 4s infinite ease-in-out;
+  border-radius: 32px;
+  padding: 28px;
+  background: linear-gradient(135deg, {T["panel"]}ee, {T["card"]}cc);
+  border: 1px solid rgba(255,255,255,.12);
+  animation: pulseGlow 5s infinite ease-in-out;
 }}
 
-.title {{
-    font-size: 52px;
-    font-weight: 950;
-    background: linear-gradient(90deg, {glow}, {accent});
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.logo {{
+  font-size: 58px;
+  font-weight: 1000;
+  letter-spacing: -2px;
+  background: linear-gradient(90deg, {T["accent2"]}, {T["accent"]});
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }}
 
-.card {{
-    padding: 22px;
-    border-radius: 24px;
-    background: rgba(255,255,255,0.075);
-    border: 1px solid rgba(255,255,255,0.16);
-    backdrop-filter: blur(18px);
-    animation: fade 0.7s ease-in-out;
+.sub {{
+  color: {T["muted"]};
+  font-size: 18px;
+}}
+
+.panel {{
+  margin-top: 18px;
+  padding: 20px;
+  border-radius: 28px;
+  background: rgba(255,255,255,.075);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(18px);
+}}
+
+.mode-pill {{
+  display: inline-block;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: {T["accent"]}22;
+  border: 1px solid {T["accent"]}66;
+  color: {T["text"]};
+  margin-right: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
 }}
 
 textarea, input {{
-    border-radius: 18px !important;
+  border-radius: 18px !important;
 }}
 
 .stButton button {{
-    border-radius: 18px;
-    background: linear-gradient(90deg, {accent}, {glow});
-    color: white;
-    font-weight: 800;
-    border: none;
-    transition: 0.2s;
+  border-radius: 18px;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,.14);
+  background: linear-gradient(90deg, {T["accent"]}, {T["accent2"]});
+  color: white;
 }}
 
 .stButton button:hover {{
-    transform: scale(1.03);
-    box-shadow: 0 0 25px {glow};
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 0 25px {T["accent2"]}77;
+}}
+
+[data-testid="stChatMessage"] {{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 20px;
+  padding: 10px;
+}}
+
+@media (max-width: 768px) {{
+  .logo {{font-size: 42px;}}
+  .hero {{padding: 22px; border-radius: 24px;}}
 }}
 </style>
 """, unsafe_allow_html=True)
 
 def extract_code(text):
-    match = re.search(r"```(?:python)?\n(.*?)```", text, re.DOTALL)
-    return match.group(1).strip() if match else ""
+    patterns = [
+        r"```python\s*(.*?)```",
+        r"```\s*(.*?)```"
+    ]
+    for p in patterns:
+        m = re.search(p, text, re.DOTALL)
+        if m:
+            return m.group(1).strip()
+    return ""
 
 def get_client():
-    key = st.session_state.api_key or st.secrets.get("GROQ_API_KEY", "")
+    key = st.session_state.api_key.strip()
+    if not key:
+        try:
+            key = st.secrets.get("GROQ_API_KEY", "")
+        except Exception:
+            key = ""
     if not key:
         return None
     return Groq(api_key=key)
 
+st.sidebar.title("⚡ Xyzan")
+st.session_state.api_key = st.sidebar.text_input(
+    "Groq API Key",
+    value=st.session_state.api_key,
+    type="password",
+    placeholder="Paste gsk_ key here"
+)
+
+model = st.sidebar.selectbox("Model", MODELS, index=0)
+
+st.session_state.system_mode = st.sidebar.radio(
+    "Mode",
+    ["Normal Chat", "Coding Sandbox", "Developer Mode"]
+)
+
+action = st.sidebar.selectbox(
+    "AI Tool",
+    [
+        "Answer normally",
+        "Fix bugs",
+        "Optimize code",
+        "Explain code",
+        "Make UI modern",
+        "Add feature",
+        "Security check",
+        "Full app upgrade"
+    ]
+)
+
+temperature = st.sidebar.slider("Creativity", 0.0, 1.0, 0.45)
+
 client = get_client()
 
-st.markdown("""
+if client:
+    st.sidebar.success("Groq connected")
+else:
+    st.sidebar.warning("Paste API key")
+
+if st.sidebar.button("Clear chat"):
+    st.session_state.messages = []
+    st.rerun()
+
+if st.sidebar.button("Clear workspace"):
+    st.session_state.workspace = ""
+    st.session_state.latest_code = ""
+    st.rerun()
+
+st.markdown(f"""
 <div class="hero">
-    <div class="title">⚡ Xyzan AI</div>
-    <h3>Modern AI coding dashboard</h3>
-    <p>Chat, code, debug, upgrade UI, and apply AI-generated code instantly.</p>
+  <div class="logo">⚡ Xyzan AI</div>
+  <div class="sub">Modern AI workspace inspired by ChatGPT, Gemini, Grok, and DeepSeek — but branded as your own.</div>
+  <br>
+  <span class="mode-pill">Chat</span>
+  <span class="mode-pill">Code</span>
+  <span class="mode-pill">Developer Mode</span>
+  <span class="mode-pill">Themes</span>
+  <span class="mode-pill">Apply AI Code</span>
 </div>
 """, unsafe_allow_html=True)
 
-st.write("")
+left, right = st.columns([1.08, 1])
 
-if client:
-    st.success("Groq connected.")
-else:
-    st.warning("Paste your Groq API key in the sidebar.")
+with left:
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.subheader("🧠 Chat")
 
-col1, col2 = st.columns([1.15, 1])
+    for msg in st.session_state.messages[-12:]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-with col1:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📝 Workspace")
-
-    st.session_state.workspace_code = st.text_area(
-        "Code editor",
-        value=st.session_state.workspace_code,
-        height=520,
-        placeholder="Paste your app.py here..."
-    )
-
-    c1, c2, c3 = st.columns(3)
-
-    run_ai = c1.button("🚀 Run AI", use_container_width=True)
-
-    if c2.button("⚡ Apply AI Code", use_container_width=True):
-        if st.session_state.ai_latest_code:
-            st.session_state.workspace_code = st.session_state.ai_latest_code
-            st.rerun()
-        else:
-            st.warning("No code to apply yet.")
-
-    if c3.button("🧹 Clear", use_container_width=True):
-        st.session_state.workspace_code = ""
-        st.session_state.ai_latest_code = ""
-        st.session_state.messages = []
-        st.rerun()
+    user_msg = st.chat_input("Message Xyzan...")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-with col2:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("💬 Chat")
+with right:
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.subheader("💻 Workspace")
 
-    user_msg = st.chat_input("Talk to Xyzan...")
+    st.session_state.workspace = st.text_area(
+        "Code editor",
+        value=st.session_state.workspace,
+        height=410,
+        placeholder="Paste your app.py or code here..."
+    )
 
-    if run_ai:
-        user_msg = f"{action} this code."
+    c1, c2 = st.columns(2)
 
-    if user_msg:
-        if not client:
-            st.error("Add your Groq API key first.")
+    run_code_ai = c1.button("🚀 Improve Code", use_container_width=True)
+
+    if c2.button("⚡ Apply Last Code", use_container_width=True):
+        if st.session_state.latest_code:
+            st.session_state.workspace = st.session_state.latest_code
+            st.success("Applied.")
+            st.rerun()
         else:
-            if mode == "Normal Chat":
-                prompt = user_msg
-            else:
-                prompt = f"""
-You are Xyzan AI, a premium coding assistant.
+            st.warning("No AI code yet.")
 
-Mode: {mode}
+    if st.session_state.latest_code:
+        with st.expander("Preview extracted AI code"):
+            st.code(st.session_state.latest_code, language="python")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+if run_code_ai:
+    user_msg = f"{action}. Return the full upgraded code."
+
+if user_msg:
+    if not client:
+        st.error("Paste Groq API key in sidebar first.")
+    else:
+        if st.session_state.system_mode == "Normal Chat":
+            final_prompt = user_msg
+        else:
+            final_prompt = f"""
+You are Xyzan AI, a modern premium AI assistant for coding.
+
+Style:
+- Clean like ChatGPT.
+- Fast like Groq.
+- Helpful like Gemini.
+- Direct like Grok.
+- Technical like DeepSeek.
+Do not copy branding or names. Use Xyzan branding.
+
+Mode: {st.session_state.system_mode}
 Action: {action}
 
-Current code:
-{st.session_state.workspace_code}
+Workspace code:
+{st.session_state.workspace}
 
 User message:
 {user_msg}
 
 Rules:
-Return modern, clean, working answers.
-If giving code, return the complete code inside one Python code block.
-Developer Mode should be more technical and direct.
+- Be useful and direct.
+- For code tasks, return COMPLETE working code.
+- If returning code, use ONE Python code block.
+- Do not use deprecated Groq models.
+- Make Streamlit UI modern, mobile-friendly, and clean.
 """
 
-            st.session_state.messages.append({"role": "user", "content": user_msg})
+        st.session_state.messages.append({"role": "user", "content": user_msg})
 
-            with st.spinner("Xyzan is thinking..."):
-                try:
-                    response = client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "You are Xyzan AI, a modern AI assistant for coding, design, and developer productivity."
-                            },
-                            *st.session_state.messages[-10:],
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ],
-                        temperature=temperature,
-                        max_tokens=4096
-                    )
+        try:
+            with st.spinner("Xyzan thinking..."):
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are Xyzan AI, a premium AI assistant for chat, coding, UI design, and developer productivity."
+                        },
+                        *st.session_state.messages[-8:],
+                        {
+                            "role": "user",
+                            "content": final_prompt
+                        }
+                    ],
+                    temperature=temperature,
+                    max_tokens=4096
+                )
 
-                    ai_text = response.choices[0].message.content
-                    st.session_state.messages.append({"role": "assistant", "content": ai_text})
+            ai_text = response.choices[0].message.content
+            st.session_state.messages.append({"role": "assistant", "content": ai_text})
 
-                    code = extract_code(ai_text)
-                    if code:
-                        st.session_state.ai_latest_code = code
+            code = extract_code(ai_text)
+            if code:
+                st.session_state.latest_code = code
 
-                except Exception as e:
-                    st.error(f"Groq error: {e}")
+            st.rerun()
 
-    for msg in st.session_state.messages[-10:]:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+        except Exception as e:
+            st.error(f"Groq error: {e}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-if st.session_state.dev_mode:
-    st.divider()
-    st.subheader("🛠 Developer Mode")
+if st.session_state.system_mode == "Developer Mode":
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.subheader("🛠 Developer Console")
     st.json({
         "model": model,
         "theme": theme_name,
+        "mode": st.session_state.system_mode,
         "messages": len(st.session_state.messages),
-        "workspace_chars": len(st.session_state.workspace_code),
-        "has_ai_code": bool(st.session_state.ai_latest_code),
+        "workspace_characters": len(st.session_state.workspace),
+        "has_extracted_code": bool(st.session_state.latest_code),
         "time": str(datetime.now())
     })
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.divider()
-
-export = {
-    "workspace_code": st.session_state.workspace_code,
+export_data = {
+    "workspace": st.session_state.workspace,
     "messages": st.session_state.messages,
     "theme": theme_name,
     "model": model,
@@ -308,10 +404,10 @@ export = {
 }
 
 st.download_button(
-    "📦 Export Xyzan Project",
-    data=json.dumps(export, indent=2),
+    "📦 Export Project",
+    data=json.dumps(export_data, indent=2),
     file_name="xyzan_project.json",
     mime="application/json"
 )
 
-st.caption("Xyzan AI v3 — modern Streamlit + Groq")
+st.caption("Xyzan AI v4")
