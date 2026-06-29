@@ -1,8 +1,8 @@
+```python
 import streamlit as st
 from google import genai
 from google.genai import types
 import datetime
-import json
 
 # 1. EMPOWERED PAGE CONFIGURATION & METADATA
 st.set_page_config(
@@ -51,7 +51,6 @@ theme_styles = {
         "card_bg": "rgba(35, 12, 12, 0.65)",
         "accent_glow": "rgba(217, 4, 41, 0.35)",
         "border": "rgba(217, 4, 41, 0.2)"
-    # Fallback to dynamic adaptive layout for standard Light/Dark transitions
     }
 }
 
@@ -303,3 +302,6 @@ if prompt:
         """
 
         compiled_prompt = f"Workspace Code Context:\n
+
+```
+    
